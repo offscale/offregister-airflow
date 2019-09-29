@@ -3,6 +3,9 @@ from __future__ import print_function
 import offregister_circus.ubuntu as circus_mod
 import offregister_nginx_static.ubuntu as nginx_static
 import offregister_python.ubuntu as python_mod
+from fabric.context_managers import shell_env
+from fabric.operations import sudo
+from offregister_fab_utils.ubuntu.systemd import restart_systemd
 
 
 def install0(*args, **kwargs):
@@ -24,7 +27,7 @@ def install0(*args, **kwargs):
 
     circus0_kwargs = {
         'APP_NAME': 'airflow',
-        'APP_PORT': 8045,
+        'APP_PORT': 8080,
         'CMD': '{virtual_env}/bin/airflow'.format(virtual_env=kwargs['virtual_env']),
         'CMD_ARGS': 'webserver',
         'WSGI_FILE': None
@@ -42,3 +45,8 @@ def install0(*args, **kwargs):
         'LOCATION': '/'
     })
     nginx_static.setup_conf0(**kwargs)
+
+    with shell_env(VIRTUAL_ENV=kwargs['virtual_env'], PATH="{}/bin:$PATH".format(kwargs['virtual_env'])):
+        sudo('airflow initdb')
+
+    restart_systemd('circusd')
