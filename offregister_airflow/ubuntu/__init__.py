@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import offregister_circus.ubuntu as circus_mod
+import offregister_nginx_static.ubuntu as nginx_static
 import offregister_python.ubuntu as python_mod
 
 
@@ -30,3 +31,14 @@ def install0(*args, **kwargs):
     }
     circus0_kwargs.update(kwargs)
     circus_mod.install_circus0(**circus0_kwargs)
+
+    kwargs.setdefault('skip_nginx_restart', True)
+    kwargs.setdefault('conf_remote_filename', '/etc/nginx/sites-enabled/{}.conf'.format(kwargs['SERVER_NAME']))
+    kwargs.update({
+        'nginx_conf': 'proxy-pass.conf',
+        'NAME_OF_BLOCK': 'airflow',
+        'SERVER_LOCATION': 'localhost:{port}'.format(port=circus0_kwargs['APP_PORT']),
+        'LISTEN_PORT': 80,
+        'LOCATION': '/'
+    })
+    nginx_static.setup_conf0(**kwargs)
