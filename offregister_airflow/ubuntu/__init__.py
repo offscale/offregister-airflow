@@ -1,10 +1,21 @@
 from __future__ import print_function
 
+from platform import python_version_tuple
+
+if python_version_tuple()[0] == '2':
+    from cStringIO import StringIO
+else:
+    from io import StringIO
+
 import offregister_circus.ubuntu as circus_mod
 import offregister_nginx_static.ubuntu as nginx_static
 import offregister_python.ubuntu as python_mod
 from fabric.context_managers import shell_env
-from fabric.operations import sudo
+from fabric.contrib.files import exists
+from fabric.operations import sudo, put
+from nginx_parse_emit.emit import api_proxy_block
+from nginx_parse_emit.utils import merge_into, get_parsed_remote_conf
+from nginxparser import loads, dumps
 from offregister_fab_utils.ubuntu.systemd import restart_systemd
 
 
@@ -44,9 +55,20 @@ def install0(*args, **kwargs):
         'LISTEN_PORT': 80,
         'LOCATION': '/'
     })
-    nginx_static.setup_conf0(**kwargs)
+    if exists(kwargs['conf_remote_filename']):
+        parsed_remote_conf = get_parsed_remote_conf(kwargs['conf_remote_filename'])
 
-    with shell_env(VIRTUAL_ENV=kwargs['virtual_env'], PATH="{}/bin:$PATH".format(kwargs['virtual_env'])):
-        sudo('airflow initdb')
+        parsed_api_block = loads(api_proxy_block(location=kwargs['LOCATION'],
+                                                 proxy_pass='http://{}'.format(kwargs['SERVER_LOCATION'])))
+        sio = StringIO()
+        sio.write(dumps(merge_into(kwargs['SERVER_NAME'], parsed_remote_conf, parsed_api_block)))
+        sio.seek(0)
+
+        put(sio, kwargs['conf_remote_filename'], use_sudo=True)
+    else:
+        nginx_static.setup_conf0(**kwargs)
+
+        with shell_env(VIRTUAL_ENV=kwargs['virtual_env'], PATH="{}/bin:$PATH".format(kwargs['virtual_env'])):
+            sudo('airflow initdb')
 
     restart_systemd('circusd')
