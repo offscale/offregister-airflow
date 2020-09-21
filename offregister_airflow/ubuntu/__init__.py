@@ -2,7 +2,7 @@ from __future__ import print_function
 
 from platform import python_version_tuple
 
-if python_version_tuple()[0] == '2':
+if python_version_tuple()[0] == "2":
     from cStringIO import StringIO
 else:
     from io import StringIO
@@ -20,55 +20,71 @@ from offregister_fab_utils.ubuntu.systemd import restart_systemd
 
 
 def install0(*args, **kwargs):
-    kwargs.setdefault('virtual_env', '/opt/venvs/airflow')
+    kwargs.setdefault("virtual_env", "/opt/venvs/airflow")
 
-    if not kwargs.get('skip_virtualenv', False):
+    if not kwargs.get("skip_virtualenv", False):
         venv0_kwargs = {
-            'virtual_env': kwargs['virtual_env'],
-            'python3': True,
-            'pip_version': '19.2.3',
-            'use_sudo': True,
-            'remote_user': 'ubuntu',
-            'PACKAGES': [
-                'apache-airflow[postgres,redis]'
-            ]
+            "virtual_env": kwargs["virtual_env"],
+            "python3": True,
+            "pip_version": "19.2.3",
+            "use_sudo": True,
+            "remote_user": "ubuntu",
+            "PACKAGES": ["apache-airflow[postgres,redis]"],
         }
         venv0_kwargs.update(kwargs)
         python_mod.install_venv0(**venv0_kwargs)
 
     circus0_kwargs = {
-        'APP_NAME': 'airflow',
-        'APP_PORT': 8080,
-        'CMD': '{virtual_env}/bin/airflow'.format(virtual_env=kwargs['virtual_env']),
-        'CMD_ARGS': 'webserver',
-        'WSGI_FILE': None
+        "APP_NAME": "airflow",
+        "APP_PORT": 8080,
+        "CMD": "{virtual_env}/bin/airflow".format(virtual_env=kwargs["virtual_env"]),
+        "CMD_ARGS": "webserver",
+        "WSGI_FILE": None,
     }
     circus0_kwargs.update(kwargs)
     circus_mod.install_circus0(**circus0_kwargs)
 
-    kwargs.setdefault('skip_nginx_restart', True)
-    kwargs.setdefault('conf_remote_filename', '/etc/nginx/sites-enabled/{}.conf'.format(kwargs['SERVER_NAME']))
-    kwargs.update({
-        'nginx_conf': 'proxy-pass.conf',
-        'NAME_OF_BLOCK': 'airflow',
-        'SERVER_LOCATION': 'localhost:{port}'.format(port=circus0_kwargs['APP_PORT']),
-        'LISTEN_PORT': 80,
-        'LOCATION': '/'
-    })
-    if exists(kwargs['conf_remote_filename']):
-        parsed_remote_conf = get_parsed_remote_conf(kwargs['conf_remote_filename'])
+    kwargs.setdefault("skip_nginx_restart", True)
+    kwargs.setdefault(
+        "conf_remote_filename",
+        "/etc/nginx/sites-enabled/{}.conf".format(kwargs["SERVER_NAME"]),
+    )
+    kwargs.update(
+        {
+            "nginx_conf": "proxy-pass.conf",
+            "NAME_OF_BLOCK": "airflow",
+            "SERVER_LOCATION": "localhost:{port}".format(
+                port=circus0_kwargs["APP_PORT"]
+            ),
+            "LISTEN_PORT": 80,
+            "LOCATION": "/",
+        }
+    )
+    if exists(kwargs["conf_remote_filename"]):
+        parsed_remote_conf = get_parsed_remote_conf(kwargs["conf_remote_filename"])
 
-        parsed_api_block = loads(api_proxy_block(location=kwargs['LOCATION'],
-                                                 proxy_pass='http://{}'.format(kwargs['SERVER_LOCATION'])))
+        parsed_api_block = loads(
+            api_proxy_block(
+                location=kwargs["LOCATION"],
+                proxy_pass="http://{}".format(kwargs["SERVER_LOCATION"]),
+            )
+        )
         sio = StringIO()
-        sio.write(dumps(merge_into(kwargs['SERVER_NAME'], parsed_remote_conf, parsed_api_block)))
+        sio.write(
+            dumps(
+                merge_into(kwargs["SERVER_NAME"], parsed_remote_conf, parsed_api_block)
+            )
+        )
         sio.seek(0)
 
-        put(sio, kwargs['conf_remote_filename'], use_sudo=True)
+        put(sio, kwargs["conf_remote_filename"], use_sudo=True)
     else:
         nginx_static.setup_conf0(**kwargs)
 
-        with shell_env(VIRTUAL_ENV=kwargs['virtual_env'], PATH="{}/bin:$PATH".format(kwargs['virtual_env'])):
-            sudo('airflow initdb')
+        with shell_env(
+            VIRTUAL_ENV=kwargs["virtual_env"],
+            PATH="{}/bin:$PATH".format(kwargs["virtual_env"]),
+        ):
+            sudo("airflow initdb")
 
-    restart_systemd('circusd')
+    restart_systemd("circusd")
