@@ -3,19 +3,20 @@
 from ast import parse
 from distutils.sysconfig import get_python_lib
 from functools import partial
-from os import path, listdir
+from os import listdir, path
 from platform import python_version_tuple
-
-from setuptools import setup, find_packages
 from sys import version
 
+from setuptools import find_packages, setup
+
 if version[0] == "2":
-    from itertools import imap as map, ifilter as filter
+    from itertools import ifilter as filter
+    from itertools import imap as map
 if python_version_tuple()[0] == "3":
     imap = map
     ifilter = filter
 else:
-    from itertools import imap, ifilter
+    from itertools import ifilter, imap
 
 if __name__ == "__main__":
     package_name = "offregister_airflow"

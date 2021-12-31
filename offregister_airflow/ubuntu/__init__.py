@@ -12,10 +12,10 @@ import offregister_nginx_static.ubuntu as nginx_static
 import offregister_python.ubuntu as python_mod
 from fabric.context_managers import shell_env
 from fabric.contrib.files import exists
-from fabric.operations import sudo, put
+from fabric.operations import put, sudo
 from nginx_parse_emit.emit import api_proxy_block
-from nginx_parse_emit.utils import merge_into, get_parsed_remote_conf
-from nginxparser import loads, dumps
+from nginx_parse_emit.utils import get_parsed_remote_conf, merge_into
+from nginxparser import dumps, loads
 from offregister_fab_utils.ubuntu.systemd import restart_systemd
 
 
