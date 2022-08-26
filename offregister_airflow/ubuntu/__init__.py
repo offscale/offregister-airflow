@@ -3,16 +3,17 @@ from __future__ import print_function
 from platform import python_version_tuple
 
 if python_version_tuple()[0] == "2":
-    from cStringIO import StringIO
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
 else:
     from io import StringIO
 
 import offregister_circus.ubuntu as circus_mod
 import offregister_nginx_static.ubuntu as nginx_static
 import offregister_python.ubuntu as python_mod
-from fabric.context_managers import shell_env
 from fabric.contrib.files import exists
-from fabric.operations import put, sudo
 from nginx_parse_emit.emit import api_proxy_block
 from nginx_parse_emit.utils import get_parsed_remote_conf, merge_into
 from nginxparser import dumps, loads
@@ -60,7 +61,7 @@ def install0(*args, **kwargs):
             "LOCATION": "/",
         }
     )
-    if exists(kwargs["conf_remote_filename"]):
+    if exists(c, runner=c.run, path=kwargs["conf_remote_filename"]):
         parsed_remote_conf = get_parsed_remote_conf(kwargs["conf_remote_filename"])
 
         parsed_api_block = loads(
@@ -77,14 +78,14 @@ def install0(*args, **kwargs):
         )
         sio.seek(0)
 
-        put(sio, kwargs["conf_remote_filename"], use_sudo=True)
+        c.put(sio, kwargs["conf_remote_filename"], use_sudo=True)
     else:
-        nginx_static.setup_conf0(**kwargs)
+        nginx_static.setup_custom_conf2(**kwargs)
 
-        with shell_env(
+        env = dict(
             VIRTUAL_ENV=kwargs["virtual_env"],
             PATH="{}/bin:$PATH".format(kwargs["virtual_env"]),
-        ):
-            sudo("airflow initdb")
+        )
+        c.sudo("airflow initdb", env=env)
 
-    restart_systemd("circusd")
+    restart_systemd(c, "circusd")
