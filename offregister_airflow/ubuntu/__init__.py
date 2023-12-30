@@ -1,8 +1,8 @@
 from __future__ import print_function
 
-from platform import python_version_tuple
+from sys import version_info
 
-if python_version_tuple()[0] == "2":
+if version_info[0] == 2:
     try:
         from cStringIO import StringIO
     except ImportError:
@@ -20,7 +20,7 @@ from nginxparser import dumps, loads
 from offregister_fab_utils.ubuntu.systemd import restart_systemd
 
 
-def install0(*args, **kwargs):
+def install0(c, *args, **kwargs):
     kwargs.setdefault("virtual_env", "/opt/venvs/airflow")
 
     if not kwargs.get("skip_virtualenv", False):
@@ -89,3 +89,6 @@ def install0(*args, **kwargs):
         c.sudo("airflow initdb", env=env)
 
     restart_systemd(c, "circusd")
+
+
+__all__ = ["install0"]
